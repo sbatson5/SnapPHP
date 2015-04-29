@@ -1,0 +1,213 @@
+<?php
+session_start();
+require ("scripts/db_connection.php");
+
+$addUser = $_POST['addUser'];
+$addUser = mysqli_real_escape_string($link,$addUser);
+$addPassword = $_POST['addPassword'];	
+//encrypt the password
+$addPassword = mysqli_real_escape_string($link,crypt($addPassword, $addUser));
+$serial = $_POST['serial'];
+
+$total = $_POST['total'];
+
+
+//If the addUser and addPassword are valid
+if($addUser && $addPassword){
+
+
+	//add this user to the users table
+	$sql = "INSERT INTO users (username, password, serial) VALUES ('$addUser','$addPassword','$serial');";
+	mysqli_query($link,$sql)
+		or die(mysqli_error());
+	$newUser = "Added Successfully";
+
+	//Create a database with the same name as the user
+	$db_query = "CREATE DATABASE $addUser;";
+	mysqli_query($link,$db_query)
+		or die(mysqli_error());
+
+	//Create a table in this users DB so we can keep track of responses
+	$data_count_query = "CREATE TABLE $addUser.data_count (count int Not Null Primary key, total int, renew DATE);";
+	mysqli_query($link,$data_count_query)
+		or die(mysqli_error());
+
+	//Insert a default value of 0 - this represents how many responses have come in
+	//Set the date to the current date so we can see how many responses they receive per year
+	$insert_count_query = "INSERT INTO $addUser.data_count values (0, $total, CURDATE());";
+	mysqli_query($link,$insert_count_query)
+		or die(mysqli_error());
+
+	//Create user in mysql
+	$user_query = "CREATE USER '$addUser'@'localhost' IDENTIFIED BY '$addPassword';";
+	mysqli_query($link,$user_query)
+		or die(mysqli_error());
+
+	//Grant the appropriate permissions to the appropriate database
+	$permissions_query = "GRANT SELECT, UPDATE, INSERT, DELETE, CREATE, DROP, ALTER ON $addUser.* TO '$addUser'@'localhost';";
+	mysqli_query($link,$permissions_query)
+		or die(mysqli_error());
+
+	//flush flush flush
+	$flush = "FLUSH PRIVILEGES;";
+	mysqli_query($link,$flush)
+		or die(mysqli_error());
+	
+
+	//Make a new directory
+	mkdir($addUser);
+	
+		//Copy all of the files from the source folder into the user's folder
+	copy('source/db_connect.php', $addUser.'/db_connect.php')
+		or die("didn't copy DB file");
+	copy('source/index.php', $addUser.'/index.php')
+		or die("didn't copy main page file");
+	copy('source/submit.php', $addUser.'/submit.php')
+		or die("didn't copy submit file");
+	copy('source/navigation.php', $addUser.'/navigation.php')
+		or die("didn't copy navigation file");
+	copy('source/download.php', $addUser.'/download.php')
+		or die("didn't copy download file");
+	copy('source/delete.php', $addUser.'/delete.php')
+		or die("didn't copy deletion file");
+
+	//Write the DB connection file so that the user can only connect to their DB
+	$file_edit = $addUser.'/db_connect.php';
+
+	//Write the DB connection file so that the user can only connect to their DB
+	$file_edit = $addUser.'/db_connect.php';
+	$string = "<?php
+	define('DATABASE_HOST','localhost');
+	define('DATABASE_USERNAME','$addUser');
+	define('DATABASE_PASSWORD','$addPassword');
+	define('DATABASE_NAME','$addUser');
+	
+	\$link = mysqli_connect(DATABASE_HOST, DATABASE_USERNAME, DATABASE_PASSWORD, DATABASE_NAME)
+		or die('<p>Error in connecting the database: ' . mysqli_error() . '</p>');
+	
+	?>";
+
+	$fp = fopen($file_edit, 'w');
+	fwrite($fp, $string);
+	fclose($fp);
+}
+
+?>
+<!DOCTYPE html>
+<html>
+<head>
+
+</head>
+<body>
+<?php
+	include ("source/nav.php");
+	 echo $newUser; 
+?>
+<div id="form" class="popUp">
+	<a href="#" class="xbut"><img src="images/xbut.png" /></a>
+		<div>
+			<form action="admin.php" method="post" id="addNewUser">
+			<label for="addUser">Add a user:</label>
+			<input type="text" name="addUser" />
+			<label for="addPassword">Password:</label>
+			<input type="password" name="addPassword" class="addPass" />
+			<label for="addPassword">Confirm Password:</label>
+			<input type="password" name="checkPassword" class="checkPass" />
+			<label for="serial">Serial Number</label>
+			<input type="text" name="serial" />
+			<label for="responses">Responses Allowed:</label>
+			<input type="number" name="total" /><br />
+			<input type="button" value="Submit" class="addUserSubmit" />
+			</form>
+		</div>
+	</div>
+<div id="wrapper">
+
+	<ul class="searchField">
+	<li class="userSearch">
+			<form action="admin.php" method="post">
+				<label for="userSearch">Search for Users</label>
+				<input type="text" name="userSearch" class="searchText" />
+				<input type="submit" value="Reset" class="searchButton" />
+			</form>
+			<span class="right"><a href="overlimit.php" target="_blank">Overlimit Users</a> </span>
+		</li>
+	</ul>
+
+
+<form action="user_edit.php" method="post" id="editUsers">
+<ul class="tableList">
+<li class="tableHeader" id="userLi"><span class="left">Username</span><span class="right">Status</span>  </li>
+<?php
+	
+	//Has the user searched
+	$search = $_POST['userSearch'];
+
+	//if there has been a search then edit the list of users
+	if(!$search)
+		$user_query = "SELECT username, Status FROM users;";
+	else
+		$user_query = "SELECT username, Status FROM users WHERE username LIKE '".$search."';";
+		
+	$result = mysqli_query($link,$user_query)
+		or die(mysqli_error());
+	
+	//Show one row per user
+	while($row = mysqli_fetch_row($result)){
+		if($row[0]!="root"){
+			echo '<li>';
+			echo '<input type="checkbox" name="'.$row[0].'" value="'.$row[0].'" />';
+			echo '<span class="indent">'.$row[0].'</span>';
+			
+			$link2 = mysqli_connect(DATABASE_HOST, DATABASE_USERNAME, DATABASE_PASSWORD, $row[0])
+				or die("<p>Error in connecting the database: " . mysqli_error() . "</p>");
+			
+
+			//Checking to see if their account has expired
+			$renew_query = "SELECT * FROM data_count;";
+			$renew_result = mysqli_query($link2,$renew_query)
+				or die(mysqli_error());
+			$renew_row = mysqli_fetch_row($renew_result);
+			
+			//changing the dates to Unix timestamps so we can compare them
+			$date_added = strtotime($renew_row[2]);
+
+			$date_plus_year = strtotime(date("Y-m-d", strtotime($renew_row[2])) . "+1 year");
+			$renew_date = date($date_plus_year);
+
+			$todays_date = date("Y-m-d");
+			$today = strtotime($todays_date);
+
+			
+			if($row[1]=="Disabled"){
+				echo '<span class="right">Disabled</span></li>';
+			//If todays date is over a year from when they were added, mark the user as expired
+			}else if($today > $date_plus_year && $renew_row[0] < $renew_row[1]){
+				echo '<span class="right">Expired</span></li>';
+				$sql = "UPDATE users SET Status = 'Expired' WHERE username = '".$row[0]."';";	
+					mysqli_query($link,$sql)
+						or die(mysqli_error());
+			}else if($renew_row[0] > $renew_row[1]){
+				echo '<span class="right red">Over Limit</span></li>';
+			}else{
+				echo '<span class="right">'.$row[1].'</span></li>';
+			}
+		}
+	}
+
+?>
+<li class="tableHeader">		
+	<select name="delete" class="userDropdown">
+			<option value="delete">Delete Selected</option>
+			<option value="disable">Disable Selected</option>
+			<option value="enable">Enable Selected</option>
+			<option value="renew">Renew Selected</option>
+	</select>
+	
+		<input type="button" value="Submit" class="deleteUser" />  <a href="#" class="addUser">Add a user</a>
+</li>
+</ul>
+</form>
+</div>
+</body>
+</html>

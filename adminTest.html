@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="./styles/styles.css" />  
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+    <script src="./scripts/scripts.js"></script>
+</head>
+<body>
+
+
+<div id="masthead">
+<div id="banner">
+	<img src="./images/Snap-logo.png" class="logoImg"  />
+</div>
+<nav role="navigation" class="topNav">
+	<ul class="navi">
+		<li><a href="./account.php">My account</a></li>
+		<li><a href="./login.php">Home</a></li>
+		<li><a href="http://www.snapsurveys.com">Snap Surveys</a></li>
+		<li><a href="./help.php">Help</a></li>
+	</ul>
+</nav>
+</div>
+
+<div id="form" class="popUp">
+	<a href="#" class="xbut"><img src="images/xbut.png" /></a>
+    <div>
+        <form action="#" method="post" id="addNewUser">
+        <label for="addUser">Add a user:</label>
+        <input type="text" name="addUser" />
+        <label for="addPassword">Password:</label>
+        <input type="password" name="addPassword" class="addPass" />
+        <label for="addPassword">Confirm Password:</label>
+        <input type="password" name="checkPassword" class="checkPass" />
+        <label for="serial">Serial Number</label>
+        <input type="text" name="serial" />
+        <label for="responses">Responses Allowed:</label>
+        <input type="number" name="total" /><br />
+        <input type="button" value="Submit" class="addUserSubmit" />
+        </form>
+    </div>
+</div>
+<div id="wrapper">
+
+	<ul class="searchField">
+	<li class="userSearch">
+			<form action="admin.php" method="post">
+				<label for="userSearch">Search for Users</label>
+				<input type="text" name="userSearch" class="searchText" />
+				<input type="submit" value="Reset" class="searchButton" />
+			</form>
+			<span class="right"><a href="overlimit.php" target="_blank">Overlimit Users</a> </span>
+		</li>
+	</ul>
+
+
+<form action="user_edit.php" method="post" id="editUsers">
+<ul class="tableList">
+<li class="tableHeader" id="userLi"><span class="left">Username</span><span class="right">Status</span>  </li>
+
+<li class="tableHeader">		
+	<select name="delete" class="userDropdown">
+			<option value="delete">Delete Selected</option>
+			<option value="disable">Disable Selected</option>
+			<option value="enable">Enable Selected</option>
+			<option value="renew">Renew Selected</option>
+	</select>
+	
+		<input type="button" value="Submit" class="deleteUser" />  <a href="#" class="addUser">Add a user</a>
+</li>
+</ul>
+</form>
+</div>
+</body>
+</html>
